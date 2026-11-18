@@ -18,10 +18,10 @@ A cozy, storybook-style co-op adventure where you play as two adorable bunnies. 
 | Action | Xbox Controller | Keyboard P1 | Keyboard P2 |
 | :--- | :--- | :--- | :--- |
 | **Move** | Left Stick / D-Pad | WASD | Arrow Keys |
-| **Action (Pull/Pick/Confirm)** | A | Space / Enter | Space / Enter |
-| **Back / Leave** | B | Escape / Backspace | Escape / Backspace |
-| **Dig Burrow** | Y | KeyQ | KeyQ |
-| **Prev / Next Room** | LB / RB | KeyZ / KeyC | BracketLeft / BracketRight |
+| **Action (Pull/Pick/Confirm)** | A | Space | Enter |
+| **Back / Leave** | B | Escape | Backspace |
+| **Dig Burrow** | Y | Q | , (comma) |
+| **Prev / Next Room** | LB / RB | Z / C | [ / ] |
 
 ## For Developers
 - **Source Code**: All logic is located in the `src/` directory.
