@@ -21,7 +21,7 @@ const res = await new Promise((resolve, reject) => {
   req.on('error', reject);
   req.end(JSON.stringify({
     model, stream: true, think: false,
-    options: { num_ctx: Number(process.env.NUM_CTX || 16384), temperature: 0.2, num_predict: 12000 },
+    options: { num_ctx: Number(process.env.NUM_CTX || 12288), temperature: 0.2, num_predict: Number(process.env.NUM_PREDICT || 8000) },
     messages: [
       { role: 'system', content: 'You are a careful senior JavaScript game programmer. You write complete, working, bug-free code.' },
       { role: 'user', content: prompt },

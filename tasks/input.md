@@ -5,3 +5,5 @@ makePlayer(keyMap) used for both players. Each player keeps a `down` map for the
 map for the previous frame for every name, so pressed(name) = down && !prev. Keyboard and gamepad are combined
 (either one counts). Normalise x,y so the length is never more than 1. Guard against navigator.getGamepads
 being missing or returning null entries.
+
+PREVIOUS ATTEMPT FAILED: it declared `inputs` twice (SyntaxError: Identifier inputs has already been declared). Declare every name exactly once; create p1 and p2 first, then `export const inputs = [p1, p2];` once.
