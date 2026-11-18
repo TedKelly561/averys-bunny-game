@@ -34,3 +34,10 @@ A top panel with the text "Dig, dig, dig! Move to dig tunnels." and a hint "B: b
 When asking: a big centred panel with "Would you like this to be where your house is?" and two button hints:
 A "Yes, build my home!" and B "Keep digging". When building: a centred panel "Building your cozy home..." with
 sparkles (drawSparkle) twinkling around it.
+
+PREVIOUS ATTEMPT FAILED: (1) up/down input moved the digger sideways - compute `dc` and `dr` separately:
+if |inp.x| >= |inp.y| and |inp.x| > 0.5 then dc = sign(inp.x), dr = 0; else if |inp.y| > 0.5 then dc = 0,
+dr = sign(inp.y); target = (col + dc, row + dr). (2) It stored diggers/dug/particles/asking/building on the
+imported `state` object - they MUST be private module-level variables (`let asking = false;` etc.), never
+properties of `state`. (3) It used FLOWER_COLORS without importing it - import everything you use.
+Moving on the surface row 3 also needs moveT = 0.15 so the bunny does not teleport.

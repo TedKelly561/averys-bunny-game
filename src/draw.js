@@ -1,129 +1,157 @@
-import { FLOWER_COLORS, BUNNY_COLORS, ITEMS } from './state.js';
+import { FLOWER_COLORS, ITEMS } from './state.js';
+
+const STROKE_COLOR = '#5a3a1a';
+const STROKE_WIDTH = 2.5;
 
 export function drawBunny(ctx, x, y, o) {
-  ctx.save();
-  const facing = o.facing || 1;
-  const pose = o.pose || 'idle';
-  const t = o.t || 0;
-  const p = o.p || 0;
-  const color = o.color || BUNNY_COLORS[0];
+  const { facing = 1, pose = 'idle', t = 0, p = 0, color = '#fffaf0' } = o;
   
+  ctx.save();
   ctx.translate(x, y);
   ctx.scale(facing, 1);
-  
-  // Base bunny body
+
+  // Shadow
+  ctx.save();
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 35, 12, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+  ctx.fill();
+  ctx.restore();
+
+  let bodyY = -28;
+  let bodyScale = 1;
+
+  if (pose === 'hop') {
+    bodyY += Math.sin(p * Math.PI) * 18;
+    bodyScale = 1 + Math.sin(p * Math.PI) * 0.1;
+  } else if (pose === 'pull') {
+    ctx.rotate(-0.25 + Math.sin(t * 30) * 0.02);
+  } else if (pose === 'dig') {
+    ctx.rotate(0.3);
+  } else if (pose === 'idle') {
+    bodyScale = 1 + Math.sin(t * 2) * 0.03;
+  }
+
+  // Body
+  ctx.save();
+  ctx.translate(0, bodyY);
+  ctx.scale(bodyScale, bodyScale);
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 26, 24, 0, 0, Math.PI * 2);
   ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 35, 40, 0, 0, Math.PI * 2);
   ctx.fill();
-  
-  // Head
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.ellipse(0, -15, 30, 30, 0, 0, Math.PI * 2);
-  ctx.fill();
-  
-  // Ears
-  ctx.fillStyle = '#ff99b3'; // pink inner ears
-  ctx.beginPath();
-  ctx.ellipse(-25, -35, 15, 25, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(25, -35, 15, 25, 0, 0, Math.PI * 2);
-  ctx.fill();
-  
-  // Eyes
-  ctx.fillStyle = '#000';
-  ctx.beginPath();
-  ctx.ellipse(-10, -20, 5, 8, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(10, -20, 5, 8, 0, 0, Math.PI * 2);
-  ctx.fill();
-  
-  // Eye highlights
-  ctx.fillStyle = '#fff';
-  ctx.beginPath();
-  ctx.ellipse(-10, -20, 3, 4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(10, -20, 3, 4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  
-  // Nose
-  ctx.fillStyle = '#ff99b3';
-  ctx.beginPath();
-  ctx.ellipse(0, 5, 5, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
-  
+  ctx.strokeStyle = STROKE_COLOR;
+  ctx.lineWidth = STROKE_WIDTH;
+  ctx.stroke();
+
   // Tail
+  ctx.beginPath();
+  ctx.arc(-26, -24, 9, 0, Math.PI * 2);
   ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.ellipse(0, 35, 20, 20, 0, 0, Math.PI * 2);
   ctx.fill();
-  
-  // Tail tip
-  ctx.fillStyle = '#ff99b3';
+  ctx.stroke();
+
+  // Feet
   ctx.beginPath();
-  ctx.ellipse(0, 35, 10, 10, 0, 0, Math.PI * 2);
+  ctx.ellipse(-15, -3, 8, 4, 0, 0, Math.PI * 2);
+  ctx.ellipse(15, -3, 8, 4, 0, 0, Math.PI * 2);
+  ctx.fillStyle = color;
   ctx.fill();
-  
-  // Pose-specific drawing
-  switch (pose) {
-    case 'hop':
-      ctx.save();
-      ctx.translate(0, 0);
-      ctx.scale(1, p);
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 35, 40, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      break;
-    case 'pull':
-      ctx.save();
-      ctx.translate(0, 0);
-      ctx.scale(1, p);
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 35, 40, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      break;
-    case 'eat':
-      ctx.save();
-      ctx.translate(0, 0);
-      ctx.scale(1, p);
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 35, 40, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      // Draw carrot in mouth
-      ctx.fillStyle = '#ff6600';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-      break;
-    case 'dig':
-      ctx.save();
-      ctx.translate(0, 0);
-      ctx.scale(1, p);
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 35, 40, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      break;
-    case 'idle':
-    default:
-      // Default idle pose
-      ctx.save();
-      ctx.translate(0, 0);
-      ctx.scale(1, p);
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 35, 40, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      break;
+  ctx.stroke();
+  ctx.restore();
+
+  // Head
+  ctx.save();
+  ctx.translate(14, -56);
+  if (pose === 'idle' && Math.sin(t * 5) > 0.8) {
+    // Ear twitch logic handled by drawing slightly different ear positions
   }
   
+  ctx.beginPath();
+  ctx.arc(0, 0, 20, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.stroke();
+
+  // Ears
+  const drawEar = (ex, ey, rot) => {
+    ctx.save();
+    ctx.translate(ex, ey);
+    ctx.rotate(rot);
+    ctx.beginPath();
+    ctx.ellipse(0, -12, 7, 22, 0, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.stroke();
+    // Inner ear
+    ctx.beginPath();
+    ctx.ellipse(0, -12, 4, 16, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffb6c9';
+    ctx.fill();
+    ctx.restore();
+  };
+  drawEar(-10, -34, -0.1);
+  drawEar(10, -34, 0.1);
+
+  // Eyes
+  const drawEye = (ex, ey) => {
+    ctx.beginPath();
+    ctx.arc(ex, ey, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#222';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(ex + 1, ey - 1, 1.5, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+  };
+  drawEye(6, -60);
+  drawEye(12, -60);
+
+  // Nose & Blush
+  ctx.beginPath();
+  ctx.arc(19, -53, 3, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffb6c9';
+  ctx.fill();
+  ctx.beginPath();
+  ctx.arc(12, -48, 4, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255, 182, 199, 0.4)';
+  ctx.fill();
+
+  // Paws
+  ctx.beginPath();
+  ctx.ellipse(10, -15, 6, 4, 0.5, 0, Math.PI * 2);
+  if (pose === 'dig') {
+    ctx.translate(Math.sin(t * 25) * 2, 0);
+  }
+  ctx.fillStyle = color;
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.restore();
+
+  if (pose === 'eat') {
+    ctx.save();
+    ctx.translate(36, -48);
+    ctx.rotate(Math.sin(t * 10) * 0.1);
+    // Small carrot
+    ctx.beginPath();
+    ctx.moveTo(-3, 0);
+    ctx.lineTo(3, 0);
+    ctx.lineTo(0, -10);
+    ctx.closePath();
+    ctx.fillStyle = '#e67e22';
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-4, -10);
+    ctx.lineTo(4, -10);
+    ctx.lineTo(0, -15);
+    ctx.closePath();
+    ctx.fillStyle = '#27ae60';
+    ctx.fill();
+    ctx.restore();
+  }
+
   ctx.restore();
 }
 
@@ -131,189 +159,176 @@ export function drawCarrotPlant(ctx, x, y, pulled, t) {
   ctx.save();
   ctx.translate(x, y);
   
-  // Leafy top
-  ctx.fillStyle = '#4a9a3a';
+  // Leaves
+  ctx.fillStyle = '#27ae60';
+  ctx.strokeStyle = STROKE_COLOR;
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 3; i++) {
+    ctx.save();
+    ctx.rotate((i - 1) * 0.5);
+    ctx.beginPath();
+    ctx.ellipse(0, -15, 6, 12, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  // Carrot
+  ctx.save();
   ctx.beginPath();
-  ctx.ellipse(0, 0, 20, 30, 0, 0, Math.PI * 2);
+  ctx.moveTo(-7, 0);
+  ctx.lineTo(7, 0);
+  ctx.lineTo(4, -40);
+  ctx.lineTo(-4, -40);
+  ctx.closePath();
+  ctx.fillStyle = '#e67e22';
   ctx.fill();
-  
-  // Stem
-  ctx.fillStyle = '#4a9a3a';
-  ctx.beginPath();
-  ctx.moveTo(0, 30);
-  ctx.lineTo(0, 60);
   ctx.stroke();
   
-  // Root
-  ctx.fillStyle = '#4a9a3a';
+  // Lift effect
+  ctx.translate(0, -pulled * 40);
+  ctx.restore();
+
+  // Dirt mound
   ctx.beginPath();
-  ctx.ellipse(0, 60, 10, 5, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, 15, 8, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#6d4c41';
   ctx.fill();
-  
-  // Carrot (when pulled)
-  if (pulled === 1) {
-    ctx.fillStyle = '#ff6600';
-    ctx.beginPath();
-    ctx.ellipse(0, 60, 15, 10, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-  
   ctx.restore();
 }
 
 export function drawCarrot(ctx, x, y, size, bites) {
   ctx.save();
   ctx.translate(x, y);
-  ctx.scale(size / 30, size / 30);
-  
-  // Carrot body
-  ctx.fillStyle = '#ff6600';
   ctx.beginPath();
-  ctx.ellipse(0, 0, 15, 10, 0, 0, Math.PI * 2);
+  ctx.moveTo(-size / 4, 0);
+  ctx.lineTo(size / 4, 0);
+  ctx.lineTo(size / 3, -size);
+  ctx.lineTo(-size / 3, -size);
+  ctx.closePath();
+  ctx.fillStyle = '#e67e22';
   ctx.fill();
-  
-  // Carrot top
-  ctx.fillStyle = '#ff6600';
-  ctx.beginPath();
-  ctx.ellipse(0, -5, 5, 3, 0, 0, Math.PI * 2);
-  ctx.fill();
-  
-  // Carrot root
-  ctx.fillStyle = '#ff6600';
-  ctx.beginPath();
-  ctx.ellipse(0, 10, 5, 2, 0, 0, Math.PI * 2);
-  ctx.fill();
+  ctx.strokeStyle = STROKE_COLOR;
+  ctx.lineWidth = 2;
+  ctx.stroke();
   
   // Bites
   for (let i = 0; i < bites; i++) {
-    ctx.fillStyle = '#ff6600';
     ctx.beginPath();
-    ctx.ellipse(0, 5 - i * 2, 3, 1, 0, 0, Math.PI * 2);
+    ctx.arc(-size / 4 + (i * 5), -size * 0.7, 4, 0, Math.PI * 2);
+    ctx.fillStyle = '#6d4c41';
     ctx.fill();
   }
-  
+
+  // Top
+  ctx.beginPath();
+  ctx.moveTo(-size / 3, -size);
+  ctx.lineTo(size / 3, -size);
+  ctx.lineTo(0, -size - 8);
+  ctx.closePath();
+  ctx.fillStyle = '#27ae60';
+  ctx.fill();
+  ctx.stroke();
   ctx.restore();
 }
 
 export function drawFlower(ctx, x, y, color, t, scale = 1) {
   ctx.save();
   ctx.translate(x, y);
+  const sway = Math.sin(t * 2 + x * 0.01) * 0.05;
+  ctx.rotate(sway);
   ctx.scale(scale, scale);
-  
+
   // Stem
-  ctx.fillStyle = '#4a9a3a';
   ctx.beginPath();
   ctx.moveTo(0, 0);
-  ctx.lineTo(0, 40);
+  ctx.lineTo(0, -28);
+  ctx.strokeStyle = '#2d5a27';
+  ctx.lineWidth = 3;
   ctx.stroke();
-  
+
   // Leaves
-  ctx.fillStyle = '#4a9a3a';
+  ctx.fillStyle = '#2d5a27';
   ctx.beginPath();
-  ctx.ellipse(-10, 0, 5, 10, 0, 0, Math.PI * 2);
+  ctx.ellipse(-5, -10, 4, 8, -0.5, 0, Math.PI * 2);
+  ctx.ellipse(5, -15, 4, 8, 0.5, 0, Math.PI * 2);
   ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(10, 0, 5, 10, 0, 0, Math.PI * 2);
-  ctx.fill();
-  
+
   // Petals
   ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.moveTo(0, 40);
-  ctx.quadraticCurveTo(-15, 60, -30, 40);
-  ctx.quadraticCurveTo(-15, 20, 0, 40);
-  ctx.fill();
-  
-  ctx.beginPath();
-  ctx.moveTo(0, 40);
-  ctx.quadraticCurveTo(15, 60, 30, 40);
-  ctx.quadraticCurveTo(15, 20, 0, 40);
-  ctx.fill();
-  
-  ctx.beginPath();
-  ctx.moveTo(0, 40);
-  ctx.quadraticCurveTo(-10, 50, -20, 40);
-  ctx.quadraticCurveTo(-10, 30, 0, 40);
-  ctx.fill();
-  
-  ctx.beginPath();
-  ctx.moveTo(0, 40);
-  ctx.quadraticCurveTo(10, 50, 20, 40);
-  ctx.quadraticCurveTo(10, 30, 0, 40);
-  ctx.fill();
-  
-  ctx.beginPath();
-  ctx.moveTo(0, 40);
-  ctx.quadraticCurveTo(-5, 45, -10, 40);
-  ctx.quadraticCurveTo(-5, 35, 0, 40);
-  ctx.fill();
-  
-  ctx.beginPath();
-  ctx.moveTo(0, 40);
-  ctx.quadraticCurveTo(5, 45, 10, 40);
-  ctx.quadraticCurveTo(5, 35, 0, 40);
-  ctx.fill();
-  
+  ctx.strokeStyle = STROKE_COLOR;
+  ctx.lineWidth = 1.5;
+  for (let i = 0; i < 5; i++) {
+    ctx.save();
+    ctx.translate(0, -28);
+    ctx.rotate((i * 2 * Math.PI) / 5);
+    ctx.beginPath();
+    ctx.arc(8, 0, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+  }
+
   // Center
-  ctx.fillStyle = '#ffd23f';
   ctx.beginPath();
-  ctx.ellipse(0, 40, 5, 5, 0, 0, Math.PI * 2);
+  ctx.arc(0, -28, 5, 0, Math.PI * 2);
+  ctx.fillStyle = '#ffd700';
   ctx.fill();
-  
+  ctx.stroke();
+
   ctx.restore();
 }
 
 export function drawBerryBush(ctx, x, y, hasBerries, t) {
   ctx.save();
   ctx.translate(x, y);
-  
-  // Bush
-  ctx.fillStyle = '#4a9a3a';
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 45, 45, 0, 0, Math.PI * 2);
-  ctx.fill();
-  
-  // Berries
+  ctx.fillStyle = '#1e4d2b';
+  ctx.strokeStyle = STROKE_COLOR;
+  ctx.lineWidth = 2;
+
+  const circles = [
+    [0, -30, 30], [-20, -15, 25], [20, -15, 25], [0, -5, 30]
+  ];
+  circles.forEach(c => {
+    ctx.beginPath();
+    ctx.arc(c[0], c[1], c[2], 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  });
+
   if (hasBerries) {
-    ctx.fillStyle = '#ff4a4a';
-    ctx.beginPath();
-    ctx.ellipse(-20, -20, 5, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(20, -20, 5, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(0, 20, 5, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(-10, 0, 5, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(10, 0, 5, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillStyle = '#c0392b';
+    for (let i = 0; i < 6; i++) {
+      const ang = (i * Math.PI * 2) / 6;
+      ctx.beginPath();
+      ctx.arc(Math.cos(ang) * 25, -30 + Math.sin(ang) * 15, 5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.stroke();
+    }
   }
-  
   ctx.restore();
 }
 
 export function drawRock(ctx, x, y, size) {
   ctx.save();
   ctx.translate(x, y);
-  
-  // Rock outline
-  ctx.fillStyle = '#888';
-  ctx.strokeStyle = '#5a3a1a';
-  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.ellipse(0, 0, size / 2, size / 2, 0, 0, Math.PI * 2);
+  ctx.moveTo(-size, 0);
+  ctx.quadraticCurveTo(-size, -size/2, 0, -size/2);
+  ctx.quadraticCurveTo(size, -size/2, size, 0);
+  ctx.quadraticCurveTo(size, size/2, 0, size/2);
+  ctx.quadraticCurveTo(-size, size/2, -size, 0);
+  ctx.closePath();
+  ctx.fillStyle = '#7f8c8d';
+  ctx.fill();
+  ctx.strokeStyle = STROKE_COLOR;
+  ctx.lineWidth = 2;
   ctx.stroke();
   
-  // Rock fill
-  ctx.fillStyle = '#aaa';
   ctx.beginPath();
-  ctx.ellipse(0, 0, size / 2 - 2, size / 2 - 2, 0, 0, Math.PI * 2);
+  ctx.ellipse(-size/3, -size/4, size/3, size/6, -0.5, 0, Math.PI * 2);
+  ctx.fillStyle = '#bdc3c7';
   ctx.fill();
-  
   ctx.restore();
 }
 
@@ -322,54 +337,40 @@ export function drawTree(ctx, x, y, t) {
   ctx.translate(x, y);
   
   // Trunk
-  ctx.fillStyle = '#888';
+  ctx.fillStyle = '#5d4037';
+  ctx.strokeStyle = STROKE_COLOR;
+  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.ellipse(0, 0, 10, 30, 0, 0, Math.PI * 2);
+  ctx.roundRect(-15, -90, 30, 90, 5);
   ctx.fill();
-  
-  // Leaves
-  ctx.fillStyle = '#4a9a3a';
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 30, 30, 0, 0, Math.PI * 2);
-  ctx.fill();
-  
-  // Leaf details
-  ctx.fillStyle = '#4a9a3a';
-  ctx.beginPath();
-  ctx.ellipse(-15, 0, 5, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(15, 0, 5, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(0, -15, 5, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(0, 15, 5, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
-  
+  ctx.stroke();
+
+  // Crown
+  ctx.fillStyle = '#2e7d32';
+  const circles = [
+    [0, -130, 50], [-30, -110, 40], [30, -110, 40], 
+    [0, -160, 45], [-20, -180, 35], [20, -180, 35]
+  ];
+  circles.forEach(c => {
+    ctx.beginPath();
+    ctx.arc(c[0], c[1], c[2], 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+  });
   ctx.restore();
 }
 
 export function drawGrassTuft(ctx, x, y, t) {
   ctx.save();
   ctx.translate(x, y);
-  
-  // Grass tuft
-  ctx.fillStyle = '#4a9a3a';
-  ctx.beginPath();
-  ctx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
-  
-  // Grass blades
-  ctx.fillStyle = '#4a9a3a';
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.lineTo(0, 5);
-  ctx.lineTo(5, 0);
-  ctx.lineTo(0, 0);
-  ctx.fill();
-  
+  ctx.strokeStyle = '#4caf50';
+  ctx.lineWidth = 2;
+  for (let i = 0; i < 3; i++) {
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.quadraticCurveTo(-10 + i * 5, -10 + Math.sin(t + i) * 2, -5 + i * 10, -15);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
@@ -377,249 +378,170 @@ export function drawCloud(ctx, x, y, scale) {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(scale, scale);
-  
-  // Cloud shape
   ctx.fillStyle = '#fff';
-  ctx.strokeStyle = '#5a3a1a';
+  ctx.strokeStyle = '#ddd';
   ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.ellipse(0, 0, 30, 20, 0, 0, Math.PI * 2);
+  ctx.arc(0, 0, 30, 0, Math.PI * 2);
+  ctx.arc(35, 5, 35, 0, Math.PI * 2);
+  ctx.arc(70, 0, 30, 0, Math.PI * 2);
+  ctx.fill();
   ctx.stroke();
-  ctx.fill();
-  
-  // Cloud details
-  ctx.beginPath();
-  ctx.ellipse(-15, -5, 10, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(15, -5, 10, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.beginPath();
-  ctx.ellipse(0, 10, 10, 5, 0, 0, Math.PI * 2);
-  ctx.fill();
-  
   ctx.restore();
 }
 
 export function drawSparkle(ctx, x, y, t, size = 10) {
   ctx.save();
   ctx.translate(x, y);
-  
-  // Sparkle
-  ctx.fillStyle = '#fff';
-  ctx.strokeStyle = '#5a3a1a';
+  const alpha = 0.5 + 0.5 * Math.sin(t * 5);
+  ctx.globalAlpha = alpha;
+  ctx.strokeStyle = '#ffd700';
   ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.ellipse(0, 0, size, size, 0, 0, Math.PI * 2);
-  ctx.stroke();
-  ctx.fill();
-  
-  // Sparkle details
-  ctx.beginPath();
-  ctx.ellipse(0, 0, size / 2, size / 2, 0, 0, Math.PI * 2);
-  ctx.fill();
-  
+  for (let i = 0; i < 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(i * Math.PI / 2) * size, Math.sin(i * Math.PI / 2) * size);
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
 export function drawBurrowHole(ctx, x, y) {
   ctx.save();
   ctx.translate(x, y);
-  
-  // Hole
-  ctx.fillStyle = '#000';
-  ctx.strokeStyle = '#5a3a1a';
-  ctx.lineWidth = 3;
   ctx.beginPath();
-  ctx.ellipse(0, 0, 45, 30, 0, 0, Math.PI * 2);
+  ctx.ellipse(0, 0, 45, 25, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#3e2723';
+  ctx.fill();
+  ctx.strokeStyle = STROKE_COLOR;
+  ctx.lineWidth = 2;
   ctx.stroke();
-  ctx.fill();
   
-  // Dirt mound
-  ctx.fillStyle = '#888';
   ctx.beginPath();
-  ctx.ellipse(0, 0, 30, 20, 0, 0, Math.PI * 2);
+  ctx.ellipse(10, -10, 30, 15, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#5d4037';
   ctx.fill();
-  
   ctx.restore();
 }
 
 export function drawItem(ctx, id, x, y, size) {
   ctx.save();
   ctx.translate(x, y);
-  ctx.scale(size / 30, size / 30);
-  
-  // Draw based on item type
-  switch (id) {
-    case 'red':
-    case 'yellow':
-    case 'blue':
-    case 'pink':
-    case 'white':
-      // Draw flower
-      ctx.fillStyle = FLOWER_COLORS[id];
+  ctx.scale(size / 64, size / 64);
+  ctx.strokeStyle = STROKE_COLOR;
+  ctx.lineWidth = 3;
+
+  const item = ITEMS[id];
+  if (item.kind === 'flower') {
+    const color = FLOWER_COLORS[id];
+    ctx.fillStyle = color;
+    for (let i = 0; i < 5; i++) {
       ctx.beginPath();
-      ctx.ellipse(0, 0, 15, 10, 0, 0, Math.PI * 2);
+      ctx.arc(Math.cos(i * 2 * Math.PI / 5) * 8, Math.sin(i * 2 * Math.PI / 5) * 8, 7, 0, Math.PI * 2);
       ctx.fill();
-      break;
-    case 'ribbon':
-      // Draw ribbon
-      ctx.fillStyle = '#ff6600';
-      ctx.beginPath();
-      ctx.moveTo(-10, 0);
-      ctx.lineTo(10, 0);
-      ctx.lineTo(0, 10);
-      ctx.lineTo(-10, 0);
-      ctx.fill();
-      break;
-    case 'lantern':
-      // Draw lantern
-      ctx.fillStyle = '#ffd23f';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 10, 10, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 5, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-      break;
-    case 'rug':
-      // Draw rug
-      ctx.fillStyle = '#888';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 15, 10, 0, 0, Math.PI * 2);
-      ctx.fill();
-      break;
-    case 'teapot':
-      // Draw teapot
-      ctx.fillStyle = '#888';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 10, 10, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 5, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-      break;
-    case 'painting':
-      // Draw painting
-      ctx.fillStyle = '#4a9a3a';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 15, 10, 0, 0, Math.PI * 2);
-      ctx.fill();
-      break;
-    case 'crown':
-      // Draw crown
-      ctx.fillStyle = '#ff6600';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 5, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-      break;
-    case 'acorn':
-      // Draw acorn
-      ctx.fillStyle = '#888';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-      break;
-    case 'feather':
-      // Draw feather
-      ctx.fillStyle = '#4a9a3a';
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(0, 10);
-      ctx.lineTo(5, 5);
-      ctx.lineTo(0, 0);
-      ctx.fill();
-      break;
-    case 'pebble':
-      // Draw pebble
-      ctx.fillStyle = '#888';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-      break;
-    case 'shell':
-      // Draw shell
-      ctx.fillStyle = '#888';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-      break;
-    case 'bell':
-      // Draw bell
-      ctx.fillStyle = '#888';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-      break;
-    default:
-      // Default item
-      ctx.fillStyle = '#888';
-      ctx.beginPath();
-      ctx.ellipse(0, 0, 10, 5, 0, 0, Math.PI * 2);
-      ctx.fill();
-      break;
+      ctx.stroke();
+    }
+    ctx.beginPath();
+    ctx.arc(0, 0, 5, 0, Math.PI * 2);
+    ctx.fillStyle = '#ffd700';
+    ctx.fill();
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.roundRect(-20, -20, 40, 40, 8);
+    ctx.fill();
+    ctx.stroke();
+    
+    ctx.fillStyle = '#333';
+    switch (id) {
+      case 'ribbon':
+        ctx.beginPath(); ctx.moveTo(-10, -5); ctx.lineTo(10, -5); ctx.lineTo(0, 5); ctx.fill();
+        break;
+      case 'lantern':
+        ctx.beginPath(); ctx.arc(0, -5, 10, 0, Math.PI * 2); ctx.fill();
+        break;
+      case 'rug':
+        ctx.fillRect(-15, -10, 30, 20);
+        break;
+      case 'teapot':
+        ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.fill();
+        break;
+      case 'painting':
+        ctx.fillRect(-15, -15, 30, 30);
+        break;
+      case 'crown':
+        ctx.beginPath(); ctx.moveTo(-15, 0); ctx.lineTo(15, 0); ctx.lineTo(0, -15); ctx.fill();
+        break;
+      case 'acorn':
+        ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
+        break;
+      case 'feather':
+        ctx.beginPath(); ctx.ellipse(0, 0, 5, 15, 0.3, 0, Math.PI * 2); ctx.fill();
+        break;
+      case 'pebble':
+        ctx.beginPath(); ctx.ellipse(0, 0, 12, 8, 0.5, 0, Math.PI * 2); ctx.fill();
+        break;
+      case 'shell':
+        ctx.beginPath(); ctx.arc(0, 0, 12, 0, Math.PI * 2); ctx.stroke();
+        break;
+      case 'bell':
+        ctx.beginPath(); ctx.arc(0, 0, 10, 0, Math.PI * 2); ctx.fill();
+        break;
+    }
   }
-  
   ctx.restore();
 }
 
 export function drawPanel(ctx, x, y, w, h, fill = 'rgba(255,250,235,0.95)') {
   ctx.save();
   ctx.translate(x, y);
-  
-  // Panel
+  ctx.beginPath();
+  ctx.roundRect(0, 0, w, h, 15);
   ctx.fillStyle = fill;
+  ctx.fill();
   ctx.strokeStyle = '#5a3a1a';
   ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.roundRect(0, 0, w, h);
-  ctx.fill();
   ctx.stroke();
-  
   ctx.restore();
 }
 
 export function drawText(ctx, text, x, y, size = 28, color = '#5a3a1a', align = 'left') {
   ctx.save();
   ctx.translate(x, y);
-  ctx.textAlign = align;
+  if (align === 'center') ctx.textAlign = 'center';
+  else ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.font = `${size}px Arial, sans-serif`;
+  ctx.font = `bold ${size}px sans-serif`;
   ctx.fillStyle = color;
   ctx.fillText(text, 0, 0);
-  
   ctx.restore();
 }
 
 export function drawButtonHint(ctx, button, label, x, y, usingGamepad) {
   ctx.save();
   ctx.translate(x, y);
+  const colors = { a: '#4caf50', b: '#f44336', x: '#2196f3', y: '#ffeb3b' };
+  const color = colors[button.toLowerCase()] || '#9e9e9e';
   
-  // Button circle
-  ctx.fillStyle = '#5a3a1a';
-  ctx.strokeStyle = '#fff';
-  ctx.lineWidth = 2;
   ctx.beginPath();
-  ctx.arc(0, 0, 20, 0, Math.PI * 2);
-  ctx.stroke();
+  ctx.arc(0, 0, 15, 0, Math.PI * 2);
+  ctx.fillStyle = color;
   ctx.fill();
+  ctx.strokeStyle = STROKE_COLOR;
+  ctx.lineWidth = 2;
+  ctx.stroke();
   
-  // Button letter
   ctx.fillStyle = '#fff';
-  ctx.font = '20px Arial, sans-serif';
+  ctx.font = 'bold 14px sans-serif';
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText(button, 0, 0);
+  ctx.fillText(button.toUpperCase(), 0, 0);
   
-  // Label
   ctx.fillStyle = '#5a3a1a';
-  ctx.font = '16px Arial, sans-serif';
+  ctx.font = '14px sans-serif';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
-  ctx.fillText(label, 25, 0);
-  
+  ctx.fillText(label, 35, 0);
   ctx.restore();
 }

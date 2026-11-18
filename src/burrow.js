@@ -1,24 +1,31 @@
 import { state, save, BUNNY_COLORS } from './state.js';
-import { drawBunny, drawCarrotPlant, drawFlower, drawRock, drawTree, drawGrassTuft, drawCloud, drawSparkle, drawBurrowHole, drawItem, drawPanel, drawText, drawButtonHint } from './draw.js';
+import * as draw from './draw.js';
+
+let dug = new Set();
+let diggers = [
+  { col: 0, row: 0, px: 0, py: 0, moveT: 0, facing: 1, digging: false },
+  { col: 0, row: 0, px: 0, py: 0, moveT: 0, facing: 1, digging: false }
+];
+let particles = [];
+let asking = false;
+let askedAt = 0;
+let building = 0;
 
 export const scene = {
   enter(game) {
-    state.dug = new Set();
-    state.diggers = [
-      { col: 15, row: 3, px: 15 * 40 + 20, py: 3 * 40 + 20, moveT: 0, facing: 1, digging: false },
-      { col: 17, row: 3, px: 17 * 40 + 20, py: 3 * 40 + 20, moveT: 0, facing: 1, digging: false }
-    ];
-    state.particles = [];
-    state.asking = false;
-    state.askedAt = 0;
-    state.building = 0;
+    dug.clear();
+    // Digger 0 at col 15, row 3; Digger 1 at col 17, row 3
+    diggers[0] = { col: 15, row: 3, px: 15 * 40 + 20, py: 3 * 40 + 20, moveT: 0, facing: 1, digging: false };
+    diggers[1] = { col: 17, row: 3, px: 17 * 40 + 20, py: 3 * 40 + 20, moveT: 0, facing: 1, digging: false };
+    asking = false;
+    askedAt = 0;
+    building = 0;
   },
 
   update(dt, game) {
-    // Building phase
-    if (state.building > 0) {
-      state.building -= dt;
-      if (state.building <= 0) {
+    if (building > 0) {
+      building -= dt;
+      if (building <= 0) {
         state.homeBuilt = true;
         state.burrow = state.digSite;
         save();
@@ -27,268 +34,190 @@ export const scene = {
       }
     }
 
-    // Asking phase
-    if (state.asking) {
-      const inputs = game.inputs;
-      let anyPressedA = false;
-      let anyPressedB = false;
+    if (asking) {
+      let anyA = false;
+      let anyB = false;
       for (let i = 0; i < game.numPlayers; i++) {
-        if (inputs[i].pressed('a')) anyPressedA = true;
-        if (inputs[i].pressed('b')) anyPressedB = true;
+        if (game.inputs[i].pressed('a')) anyA = true;
+        if (game.inputs[i].pressed('b')) anyB = true;
       }
-      if (anyPressedA) {
-        state.building = 2.5;
-        state.asking = false;
-      } else if (anyPressedB) {
-        state.asking = false;
-        state.askedAt = state.dug.size;
+      if (anyA) {
+        building = 2.5;
+        asking = false;
+      } else if (anyB) {
+        asking = false;
+        askedAt = dug.size;
       }
       return;
     }
 
-    // Update diggers
-    const diggers = state.diggers;
-    const inputs = game.inputs;
     for (let i = 0; i < game.numPlayers; i++) {
-      const digger = diggers[i];
-      const inp = inputs[i];
+      const inp = game.inputs[i];
+      const d = diggers[i];
 
-      // Smooth movement toward cell center
-      const targetX = digger.col * 40 + 20;
-      const targetY = digger.row * 40 + 20;
-      const dx = targetX - digger.px;
-      const dy = targetY - digger.py;
-      const speed = 3;
-      digger.px += dx * speed * dt;
-      digger.py += dy * speed * dt;
+      if (d.moveT > 0) {
+        d.moveT -= dt;
+        continue;
+      }
 
-      // Handle movement input
-      if (digger.moveT > 0) {
-        digger.moveT -= dt;
-      } else {
-        // Determine direction from input
-        let targetCol = digger.col;
-        let targetRow = digger.row;
-        let direction = 0;
-        if (Math.abs(inp.x) > 0.5) {
-          direction = inp.x > 0 ? 1 : -1;
-        } else if (Math.abs(inp.y) > 0.5) {
-          direction = inp.y > 0 ? 1 : -1;
-        }
+      let dc = 0;
+      let dr = 0;
+      if (Math.abs(inp.x) >= Math.abs(inp.y) && Math.abs(inp.x) > 0.5) {
+        dc = inp.x > 0 ? 1 : -1;
+        dr = 0;
+      } else if (Math.abs(inp.y) > 0.5) {
+        dc = 0;
+        dr = inp.y > 0 ? 1 : -1;
+      }
 
-        // Calculate target cell
-        if (direction !== 0) {
-          if (direction > 0) {
-            targetCol = Math.min(digger.col + 1, 31);
-          } else {
-            targetCol = Math.max(digger.col - 1, 0);
+      const targetCol = Math.max(0, Math.min(31, d.col + dc));
+      const targetRow = Math.max(3, Math.min(17, d.row + dr));
+
+      if (targetCol !== d.col || targetRow !== d.row) {
+        const key = `${targetCol},${targetRow}`;
+        if (targetRow >= 4 && !dug.has(key)) {
+          dug.add(key);
+          d.moveT = 0.3;
+          d.digging = true;
+          for (let j = 0; j < 8; j++) {
+            particles.push({
+              x: d.px,
+              y: d.py,
+              vx: (Math.random() - 0.5) * 40,
+              vy: (Math.random() - 0.5) * 40,
+              life: 1.0
+            });
           }
-          targetRow = digger.row;
-          // Check if target is within bounds
-          if (targetRow >= 0 && targetRow <= 17 && targetCol >= 0 && targetCol <= 31) {
-            // Check if target is dug or not
-            const key = `${targetCol},${targetRow}`;
-            if (targetRow === 3) {
-              // Surface is always open
-              digger.col = targetCol;
-              digger.row = targetRow;
-              digger.facing = direction;
-              digger.moveT = 0;
-              digger.digging = false;
-            } else if (targetRow >= 4) {
-              if (state.dug.has(key)) {
-                // Already dug, just move
-                digger.col = targetCol;
-                digger.row = targetRow;
-                digger.facing = direction;
-                digger.moveT = 0.15;
-                digger.digging = false;
-              } else {
-                // New dig
-                state.dug.add(key);
-                digger.col = targetCol;
-                digger.row = targetRow;
-                digger.facing = direction;
-                digger.moveT = 0.3;
-                digger.digging = true;
-                // Spawn particles
-                for (let p = 0; p < 8; p++) {
-                  state.particles.push({
-                    x: targetX + (Math.random() - 0.5) * 10,
-                    y: targetY + (Math.random() - 0.5) * 10,
-                    vx: (Math.random() - 0.5) * 2,
-                    vy: (Math.random() - 0.5) * 2,
-                    life: 1
-                  });
-                }
-              }
-            }
-          }
+        } else {
+          d.moveT = 0.15;
+          d.digging = false;
         }
+        d.col = targetCol;
+        d.row = targetRow;
+        d.facing = dc >= 0 ? 1 : -1;
+      }
+
+      // Smooth slide
+      const targetX = d.col * 40 + 20;
+      const targetY = d.row * 40 + 20;
+      d.px += (targetX - d.px) * 0.2;
+      d.py += (targetY - d.py) * 0.2;
+    }
+
+    // Check for back to meadow
+    for (let i = 0; i < game.numPlayers; i++) {
+      if (game.inputs[i].pressed('b') && diggers[i].row === 3) {
+        game.switchTo('meadow');
+        return;
       }
     }
 
     // Update particles
-    const particles = state.particles;
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
-      p.vx += (Math.random() - 0.5) * 0.1;
-      p.vy += 0.05;
-      p.life -= dt;
-      if (p.life <= 0) {
-        particles.splice(i, 1);
-      } else {
-        p.x += p.vx;
-        p.y += p.vy;
-      }
+      p.x += p.vx;
+      p.y += p.vy;
+      p.vy += 0.5; // gravity
+      p.life -= 0.02;
+      if (p.life <= 0) particles.splice(i, 1);
     }
 
-    // Check if asking condition is met
-    if (!state.asking && state.dug.size >= 14) {
+    // Check for asking condition
+    if (!asking && dug.size >= 14) {
+      let anyDeep = false;
       for (let i = 0; i < game.numPlayers; i++) {
-        const digger = state.diggers[i];
-        if (digger.row >= 9 && state.dug.size >= state.askedAt + 6) {
-          state.asking = true;
-          state.askedAt = state.dug.size;
-          break;
-        }
+        if (diggers[i].row >= 9) anyDeep = true;
       }
-    }
-
-    // Handle back button
-    for (let i = 0; i < game.numPlayers; i++) {
-      if (inputs[i].pressed('b') && state.diggers[i].row === 3) {
-        game.switchTo('meadow');
-        return;
+      if (anyDeep && dug.size >= askedAt + 6) {
+        asking = true;
       }
     }
   },
 
   draw(ctx, game) {
-    const W = 1280;
-    const H = 720;
+    const { W, H } = game;
 
-    // Clear canvas
-    ctx.clearRect(0, 0, W, H);
-
-    // Draw sky gradient
-    ctx.save();
-    ctx.fillStyle = '#87CEEB';
+    // Sky
+    const skyGrad = ctx.createLinearGradient(0, 0, 0, 160);
+    skyGrad.addColorStop(0, '#87CEEB');
+    skyGrad.addColorStop(1, '#E0F6FF');
+    ctx.fillStyle = skyGrad;
     ctx.fillRect(0, 0, W, 160);
-    ctx.restore();
 
-    // Draw sun
-    ctx.save();
+    // Sun
     ctx.fillStyle = '#FFD700';
     ctx.beginPath();
-    ctx.arc(W / 2, 80, 30, 0, Math.PI * 2);
+    ctx.arc(100, 60, 40, 0, Math.PI * 2);
     ctx.fill();
-    ctx.restore();
 
-    // Draw clouds
-    drawCloud(ctx, 200, 50, 1.5);
-    drawCloud(ctx, 800, 70, 1.2);
+    // Clouds
+    draw.drawCloud(ctx, 200, 50, 1.2);
+    draw.drawCloud(ctx, 800, 80, 1.0);
 
-    // Draw dirt
-    ctx.save();
+    // Dirt
     ctx.fillStyle = '#8b5a2b';
     ctx.fillRect(0, 160, W, H - 160);
-    ctx.restore();
+    ctx.fillStyle = '#6d4320';
+    ctx.fillRect(0, H - 40, W, 40);
 
-    // Draw grass strip
-    ctx.save();
-    ctx.fillStyle = '#4b862a';
-    ctx.fillRect(0, 160, W, 10);
-    ctx.restore();
+    // Grass strip
+    ctx.fillStyle = '#4a7c2c';
+    ctx.fillRect(0, 155, W, 10);
 
-    // Draw dug cells
-    ctx.save();
+    // Dug cells
     ctx.fillStyle = '#4a2f17';
-    ctx.strokeStyle = '#4a2f17';
-    ctx.lineWidth = 2;
-    for (let col = 0; col < 32; col++) {
-      for (let row = 4; row < 18; row++) {
-        const key = `${col},${row}`;
-        if (state.dug.has(key)) {
-          const x = col * 40 + 10;
-          const y = row * 40 + 10;
-          const w = 20;
-          const h = 20;
-          ctx.beginPath();
-          ctx.roundRect(x, y, w, h);
-          ctx.fill();
-          ctx.stroke();
-        }
-      }
-    }
-    ctx.restore();
-
-    // Draw flowers
-    const flowerPositions = [
-      { x: 100, y: 160 },
-      { x: 200, y: 160 },
-      { x: 300, y: 160 },
-      { x: 400, y: 160 },
-      { x: 500, y: 160 },
-      { x: 600, y: 160 },
-      { x: 700, y: 160 },
-      { x: 800, y: 160 },
-      { x: 900, y: 160 },
-      { x: 1000, y: 160 },
-      { x: 1100, y: 160 },
-      { x: 1200, y: 160 }
-    ];
-    for (let i = 0; i < flowerPositions.length; i++) {
-      const pos = flowerPositions[i];
-      const color = FLOWER_COLORS.red;
-      drawFlower(ctx, pos.x, pos.y, color, 0, 0.8);
-    }
-
-    // Draw particles
-    for (let p of state.particles) {
-      ctx.save();
-      ctx.fillStyle = '#8b5a2b';
+    for (const cell of dug) {
+      const [col, row] = cell.split(',').map(Number);
+      const x = col * 40;
+      const y = row * 40;
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 5, 0, Math.PI * 2);
+      ctx.roundRect(x - 2, y - 2, 44, 44, 4);
       ctx.fill();
-      ctx.restore();
     }
 
-    // Draw bunnies
-    const diggers = state.diggers;
+    // Flowers on surface
+    draw.drawFlower(ctx, 100, 155, '#e8404f', game.time);
+    draw.drawFlower(ctx, 400, 155, '#ffd23f', game.time);
+    draw.drawFlower(ctx, 700, 155, '#4f8ef7', game.time);
+    draw.drawFlower(ctx, 1100, 155, '#ff8fc7', game.time);
+
+    // Particles
+    particles.forEach(p => {
+      ctx.fillStyle = `rgba(139, 90, 43, ${p.life})`;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+      ctx.fill();
+    });
+
+    // Bunnies
     for (let i = 0; i < game.numPlayers; i++) {
-      const digger = diggers[i];
-      const color = BUNNY_COLORS[i];
-      const pose = digger.digging && digger.moveT > 0 ? 'dig' : 'idle';
-      drawBunny(ctx, digger.px, digger.py + 20, {
-        facing: digger.facing,
+      const d = diggers[i];
+      const pose = (d.digging || d.moveT > 0) ? 'dig' : 'idle';
+      draw.drawBunny(ctx, d.px, d.py, {
+        facing: d.facing,
         pose,
-        t: 0,
+        t: game.time,
         p: 0,
-        color
+        color: BUNNY_COLORS[i]
       });
     }
 
-    // Draw top panel
-    drawPanel(ctx, 0, 0, W, 60, 'rgba(255,230,180,0.9)');
-    drawText(ctx, 'Dig, dig, dig! Move to dig tunnels.', 20, 30, 24, '#5a3a1a', 'left');
-    drawText(ctx, 'B: back to the meadow (from the top)', 20, 55, 18, '#5a3a1a', 'left');
-
-    // Draw asking panel
-    if (state.asking) {
-      drawPanel(ctx, 0, 0, W, H, 'rgba(255,230,180,0.9)');
-      drawText(ctx, 'Would you like this to be where your house is?', W / 2, H / 2 - 40, 36, '#5a3a1a', 'center');
-      drawButtonHint(ctx, 'a', 'Yes, build my home!', W / 2 - 100, H / 2 + 20, false);
-      drawButtonHint(ctx, 'b', 'Keep digging', W / 2 + 100, H / 2 + 20, false);
-    }
-
-    // Draw building panel
-    if (state.building > 0) {
-      drawPanel(ctx, 0, 0, W, H, 'rgba(255,230,180,0.9)');
-      drawText(ctx, 'Building your cozy home...', W / 2, H / 2 - 40, 36, '#5a3a1a', 'center');
-      for (let i = 0; i < 10; i++) {
-        drawSparkle(ctx, W / 2 + (i % 2 === 0 ? 20 : -20), H / 2 + (i % 2 === 0 ? 20 : -20), 0.1 + i * 0.05, 10);
-      }
+    // UI Panels
+    if (asking) {
+      ctx.fillStyle = 'rgba(0,0,0,0.4)';
+      ctx.fillRect(0, 0, W, H);
+      draw.drawPanel(ctx, W / 2 - 200, H / 2 - 100, 400, 200);
+      draw.drawText(ctx, "Would you like this to be where your house is?", W / 2, H / 2 - 40, 32, 'center');
+      draw.drawButtonHint(ctx, 'a', 'Yes, build my home!', W / 2 - 120, H / 2 + 40, game.numPlayers > 1 ? false : false); // Simplified for logic
+      draw.drawButtonHint(ctx, 'b', 'Keep digging', W / 2 + 120, H / 2 + 40, game.numPlayers > 1 ? false : false);
+    } else if (building) {
+      draw.drawPanel(ctx, W / 2 - 200, H / 2 - 100, 400, 200);
+      draw.drawText(ctx, "Building your cozy home...", W / 2, H / 2, 32, 'center');
+      draw.drawSparkle(ctx, W / 2, H / 2 + 50, game.time, 15);
+    } else {
+      draw.drawPanel(ctx, 20, 20, 400, 60);
+      draw.drawText(ctx, "Dig, dig, dig! Move to dig tunnels.", 220, 50, 24);
+      draw.drawText(ctx, "B: back to the meadow (from the top)", 220, 80, 18, 'left');
     }
   }
 };

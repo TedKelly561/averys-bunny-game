@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { extname, join } from 'node:path';
 
 const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.md': 'text/plain' };
-const root = process.cwd();
+const root = join(import.meta.dirname, '..');
 createServer(async (req, res) => {
   let path = decodeURIComponent(req.url.split('?')[0]);
   if (path.includes('..')) { res.writeHead(400); res.end(); return; }

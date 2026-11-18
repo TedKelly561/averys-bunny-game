@@ -1,10 +1,18 @@
-/**
- * src/input.js
- * Handles keyboard and gamepad input for two players.
- */
+const keys = new Set();
 
-const KEY_MAPS = [
-  { // Player 1
+window.addEventListener('keydown', (e) => {
+  keys.add(e.code);
+  if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'].includes(e.code)) {
+    e.preventDefault();
+  }
+});
+
+window.addEventListener('keyup', (e) => {
+  keys.delete(e.code);
+});
+
+const KEY_MAPS = {
+  p1: {
     a: 'Space',
     b: 'Escape',
     x: 'KeyE',
@@ -12,12 +20,12 @@ const KEY_MAPS = [
     lb: 'KeyZ',
     rb: 'KeyC',
     start: 'KeyP',
-    up: 'ArrowUp',
-    down: 'ArrowDown',
-    left: 'ArrowLeft',
-    right: 'ArrowRight'
+    up: 'KeyW',
+    down: 'KeyS',
+    left: 'KeyA',
+    right: 'KeyD'
   },
-  { // Player 2
+  p2: {
     a: 'Enter',
     b: 'Backspace',
     x: 'Period',
@@ -30,7 +38,7 @@ const KEY_MAPS = [
     left: 'ArrowLeft',
     right: 'ArrowRight'
   }
-];
+};
 
 function makePlayer(keyMap) {
   const player = {
@@ -43,7 +51,7 @@ function makePlayer(keyMap) {
     held: (name) => player.down[name]
   };
 
-  // Initialize all possible keys to false
+  // Initialize all possible names
   const names = ['a', 'b', 'x', 'y', 'lb', 'rb', 'start', 'up', 'down', 'left', 'right'];
   names.forEach(name => {
     player.down[name] = false;
@@ -53,111 +61,109 @@ function makePlayer(keyMap) {
   return player;
 }
 
-const p1 = makePlayer(KEY_MAPS[0]);
-const p2 = makePlayer(KEY_MAPS[1]);
+const p1 = makePlayer(KEY_MAPS.p1);
+const p2 = makePlayer(KEY_MAPS.p2);
 
 export const inputs = [p1, p2];
 
-// Handle Keyboard Events
-window.addEventListener('keydown', (e) => {
-  const code = e.code;
-  // Prevent scrolling/default actions for navigation keys
-  if (['Space', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight'].includes(code)) {
-    e.preventDefault();
-  }
-
-  for (let i = 0; i < 2; i++) {
-    const map = KEY_MAPS[i];
-    for (const [btn, key] of Object.entries(map)) {
-      if (code === key) {
-        inputs[i].down[btn] = true;
-      }
-    }
-  }
-});
-
-window.addEventListener('keyup', (e) => {
-  const code = e.code;
-  for (let i = 0; i < 2; i++) {
-    const map = KEY_MAPS[i];
-    for (const [btn, key] of Object.entries(map)) {
-      if (code === key) {
-        inputs[i].down[btn] = false;
-      }
-    }
-  }
-});
-
 export function updateInputs() {
-  const gamepads = navigator.getGamepads ? navigator.getGamepads() : [];
+  const pads = Array.from(navigator.getGamepads ? navigator.getGamepads() : []).filter(Boolean);
 
-  for (let i = 0; i < 2; i++) {
-    const player = inputs[i];
-    const gp = gamepads[i];
+  [p1, p2].forEach((player, idx) => {
+    const keyMap = idx === 0 ? KEY_MAPS.p1 : KEY_MAPS.p2;
+    const pad = pads[idx];
 
-    // Reset state for the new frame
+    // Shift current state to previous
     for (const name in player.down) {
       player.prev[name] = player.down[name];
-      player.down[name] = false;
     }
 
-    player.x = 0;
-    player.y = 0;
+    let stickX = 0;
+    let stickY = 0;
+    let padActive = false;
 
-    if (gp && gp.connected) {
-      // Gamepad buttons
-      const buttons = gp.buttons;
+    if (pad) {
+      // Sticks
+      let rawX = pad.axes[0] || 0;
+      let rawY = pad.axes[1] || 0;
+      
+      // Deadzone 0.25
+      if (Math.abs(rawX) < 0.25) rawX = 0;
+      if (Math.abs(rawY) < 0.25) rawY = 0;
+      
+      stickX = rawX;
+      stickY = rawY;
+
+      // Check buttons
+      const buttons = pad.buttons.map(b => b.pressed);
       const btnMap = {
-        a: 0, b: 1, x: 2, y: 3,
-        lb: 4, rb: 5, start: 9,
+        a: 0, b: 1, x: 2, y: 3, lb: 4, rb: 5, start: 9,
         up: 12, down: 13, left: 14, right: 15
       };
 
-      for (const [name, idx] of Object.entries(btnMap)) {
-        if (buttons[idx] && buttons[idx].pressed) {
+      for (const name in keyMap) {
+        if (buttons[btnMap[name]]) {
           player.down[name] = true;
+          padActive = true;
+        } else {
+          player.down[name] = false;
         }
       }
 
-      // Gamepad Axes (Left Stick)
-      const lx = gp.axes[0] || 0;
-      const ly = gp.axes[1] || 0;
-      const deadzone = 0.25;
-
-      if (Math.abs(lx) > deadzone) {
-        player.x += lx > 0 ? 1 : -1;
-        if (Math.abs(lx) > 0.6) player.down.right = lx > 0;
-        if (Math.abs(lx) > 0.6) player.down.left = lx < 0;
-      }
-      if (Math.abs(ly) > deadzone) {
-        player.y += ly > 0 ? 1 : -1;
-        if (Math.abs(ly) > 0.6) player.down.down = ly > 0;
-        if (Math.abs(ly) > 0.6) player.down.up = ly < 0;
-      }
-
-      // If any button or stick was moved, mark as using gamepad
-      if (gp.buttons.some(b => b.pressed) || Math.abs(lx) > deadzone || Math.abs(ly) > deadzone) {
-        player.usingGamepad = true;
+      // Stick direction logic (past 0.6)
+      if (stickX > 0.6) player.down['right'] = true;
+      else if (stickX < -0.6) player.down['left'] = true;
+      if (stickY > 0.6) player.down['down'] = true;
+      else if (stickY < -0.6) player.down['up'] = true;
+    } else {
+      // No gamepad, only keyboard
+      for (const name in keyMap) {
+        player.down[name] = keys.has(keyMap[name]);
       }
     }
 
-    // Keyboard overrides/additions (if gamepad not active or just as fallback)
-    // The contract says "either one counts", so we check if keyboard is pressed
-    // and set the down state if it's not already true from gamepad.
-    const map = KEY_MAPS[i];
-    for (const [btn, key] of Object.entries(map)) {
-      // We check the global state of keys. Since we don't have a global key state 
-      // object easily accessible without a side-effect, we rely on the fact that 
-      // the keydown listener already set player.down[btn] = true.
-      // However, we need to ensure that if a key is held, it stays true.
-      // The keydown/keyup listeners already handle this correctly for the 'down' property.
-    }
+    // Movement calculation
+    let moveX = 0;
+    let moveY = 0;
 
-    // Normalize movement vectors
-    const mag = Math.sqrt(player.x * player.x + player.y * player.y);
+    // Keyboard/D-Pad contribution
+    if (player.down['up']) moveY -= 1;
+    if (player.down['down']) moveY += 1;
+    if (player.down['left']) moveX -= 1;
+    if (player.down['right']) moveX += 1;
+
+    // Stick contribution
+    moveX += stickX;
+    moveY += stickY;
+
+    // Clamp and normalize
+    let mag = Math.sqrt(moveX * moveX + moveY * moveY);
     if (mag > 1) {
-      player.x /= mag;
-      player.y /= mag;
+      moveX /= mag;
+      moveY /= mag;
     }
-  }
+
+    player.x = moveX;
+    player.y = moveY;
+
+    // usingGamepad logic
+    // True if pad exists and (any button pressed OR stick outside deadzone)
+    // False if any keyboard key for this player is held
+    let anyKeyHeld = false;
+    for (const name in keyMap) {
+      if (keys.has(keyMap[name])) {
+        anyKeyHeld = true;
+        break;
+      }
+    }
+
+    if (pad && (padActive || Math.abs(stickX) > 0.25 || Math.abs(stickY) > 0.25)) {
+      player.usingGamepad = true;
+    } else {
+      player.usingGamepad = false;
+    }
+    
+    // If any keyboard key is held, it overrides the gamepad status for the "hint" logic
+    if (anyKeyHeld) player.usingGamepad = false;
+  });
 }
