@@ -12,30 +12,46 @@ storybook look for a young child. No enemies, no danger, no fail states.
 - `src/draw.js`  all drawing helpers
 - `src/meadow.js`, `src/burrow.js`, `src/house.js`  the three scenes
 
+## Two players (co-op, split screen)
+The game is for one or two bunnies. Player 1 always plays. Player 2 joins by pressing A or Start on the
+second controller (main.js handles joining and sets `game.numPlayers` to 2). Everything collected goes into
+ONE shared basket (`state`), the players work together. Bunny 1 is white, bunny 2 is light brown
+(`BUNNY_COLORS` in state.js). Scenes always keep data for 2 bunnies but only update and draw the first
+`game.numPlayers` of them. When player 2 joins mid-scene, bunny 2 appears next to bunny 1.
+- Meadow: with 2 players the screen is split into a left half (player 1) and a right half (player 2), each
+  640x720 with its own camera following its own bunny, and a 6px dark divider line down the middle.
+  With 1 player the single view is the full 1280x720.
+- Burrow and house: one shared full-screen view showing both bunnies (no split needed).
+
 ## Scene interface (meadow.js, burrow.js, house.js)
 Each scene file has exactly one export: `export const scene = { enter(game) {}, update(dt, game) {}, draw(ctx, game) {} };`
 - `dt` is seconds since last frame (max 0.05).
-- `game` is `{ state, input, W: 1280, H: 720, time, switchTo(name) }`; `time` is seconds since start,
-  `name` is `'meadow' | 'burrow' | 'house'`. `switchTo` calls the new scene's `enter(game)`.
+- `game` is `{ state, inputs, numPlayers, W: 1280, H: 720, time, switchTo(name) }`; `inputs` is the array
+  from input.js (`inputs[0]` = player 1, `inputs[1]` = player 2), `numPlayers` is 1 or 2, `time` is seconds
+  since start, `name` is `'meadow' | 'burrow' | 'house'`. `switchTo` calls the new scene's `enter(game)`.
 - `draw` must paint the whole 1280x720 canvas every frame.
-- Scenes keep their own private module-level variables (camera, timers, particles).
+- Scenes keep their own private module-level variables (cameras, timers, particles).
 
 ## input.js
-`export const input = { x, y, usingGamepad, update(), pressed(name), held(name) }`
-- `update()` is called once per frame by main.js BEFORE the scene update. Scenes never call it.
-- `x`, `y`: movement, each -1..1 (y positive = down). From left stick (deadzone 0.25), d-pad, WASD, arrow keys.
+`export const inputs = [p1, p2]` and `export function updateInputs()`.
+Each of p1, p2 is an object `{ x, y, usingGamepad, pressed(name), held(name) }`.
+- `updateInputs()` is called once per frame by main.js BEFORE the scene update. Scenes never call it.
+- Devices: p1 = first connected gamepad + keyboard set 1. p2 = second connected gamepad + keyboard set 2.
+- `x`, `y`: movement, each -1..1 (y positive = down). From left stick (deadzone 0.25), d-pad, and the
+  player's movement keys (set 1: WASD, set 2: arrow keys).
 - `held(name)`: true while down. `pressed(name)`: true only on the frame it went down.
-- Names and mappings (standard gamepad button index / keyboard):
-  `a` (0 / Space, Enter), `b` (1 / Escape, Backspace), `x` (2 / KeyE), `y` (3 / KeyQ),
-  `lb` (4 / KeyZ), `rb` (5 / KeyC), `start` (9 / KeyP),
-  `up`,`down`,`left`,`right` (d-pad 12,13,14,15 OR left stick pushed past 0.6 OR arrow keys / WASD).
+- Names and mappings (standard gamepad button index / keyboard set 1 / keyboard set 2, using event.code):
+  `a` (0 / Space / Enter), `b` (1 / Escape / Backspace), `x` (2 / KeyE / Period), `y` (3 / KeyQ / Comma),
+  `lb` (4 / KeyZ / BracketLeft), `rb` (5 / KeyC / BracketRight), `start` (9 / KeyP / Backslash),
+  `up`,`down`,`left`,`right` (d-pad 12,13,14,15 OR left stick pushed past 0.6 OR the player's movement keys).
   For up/down/left/right, `pressed` fires once when the direction is first pushed (menu navigation).
-- `usingGamepad`: true if the most recent input came from a controller (used to pick button hint text).
+- `usingGamepad`: true if that player's most recent input came from a controller (picks button hint text).
 
 ## draw.js (all functions exported by name; every function must `ctx.save()` / `ctx.restore()`)
 Coordinates are in pixels. `t` is time in seconds for gentle animation (sway, blink, twinkle).
 - `drawBunny(ctx, x, y, o)`: x,y = point on the ground between the feet. Bunny is about 70 wide, 80 tall,
-  white/cream with pink inner ears, pink nose, round tail. `o = { facing: 1|-1, pose, t, p }`.
+  white/cream with pink inner ears, pink nose, round tail. `o = { facing: 1|-1, pose, t, p, color }`;
+  `color` is the fur colour (default '#fffaf0').
   `pose`: `'idle'` (breathing, ear twitch), `'hop'` (p 0..1 hop phase, body arcs up),
   `'pull'` (leaning back tugging, p 0..1), `'eat'` (sitting, holding a carrot at mouth, cheeks wobble with t),
   `'dig'` (leaning forward, front paws scrabbling with t).
@@ -62,5 +78,5 @@ STATE_JS_HERE
 ```
 
 ## Controls summary
-Left stick / d-pad: move. A: do the thing (pull carrot, pick flower, confirm). B: back / leave.
+Each player has their own controller. Left stick / d-pad: move. A: do the thing (pull carrot, pick flower, confirm). B: back / leave.
 Y: start digging a burrow (when allowed). LB / RB: previous / next room in the house.

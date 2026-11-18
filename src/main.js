@@ -1,5 +1,5 @@
 import { state, load } from './state.js';
-import { input } from './input.js';
+import { inputs, updateInputs } from './input.js';
 import { scene as meadow } from './meadow.js';
 import { scene as burrow } from './burrow.js';
 import { scene as house } from './house.js';
@@ -15,7 +15,7 @@ const scenes = { meadow, burrow, house };
 let current = null;
 
 const game = {
-  state, input, W, H, time: 0,
+  state, inputs, numPlayers: 1, W, H, time: 0,
   sceneName: '',
   switchTo(name) {
     current = scenes[name];
@@ -33,7 +33,8 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
   game.time += dt;
-  input.update();
+  updateInputs();
+  if (game.numPlayers === 1 && (inputs[1].pressed('a') || inputs[1].pressed('start'))) game.numPlayers = 2;
   current.update(dt, game);
   ctx.setTransform(1, 0, 0, 1, 0, 0);
   ctx.globalAlpha = 1;

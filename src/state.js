@@ -3,6 +3,7 @@
 export const FLOWER_COLORS = {
   red: '#e8404f', yellow: '#ffd23f', blue: '#4f8ef7', pink: '#ff8fc7', white: '#ffffff',
 };
+export const BUNNY_COLORS = ['#fffaf0', '#d9b38c']; // player 1, player 2 fur
 export const FLOWER_TYPES = Object.keys(FLOWER_COLORS);
 
 // Everything that can be put on a decoration spot in the house.
