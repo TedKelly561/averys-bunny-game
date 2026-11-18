@@ -1,67 +1,68 @@
 import { state, save, ROOMS, ITEMS, SLOTS_PER_ROOM, BUNNY_COLORS, roomDecor, availableItems, placeItem } from './state.js';
-import { drawBunny, drawItem, drawPanel, drawText, drawButtonHint } from './draw.js';
+import { 
+  drawBunny, 
+  drawItem, 
+  drawPanel, 
+  drawText, 
+  drawButtonHint 
+} from './draw.js';
+
+let roomIndex = 0;
+const players = [
+  { slot: 0, picking: false, pickIndex: 0, options: [] },
+  { slot: 3, picking: false, pickIndex: 0, options: [] }
+];
 
 export const scene = {
   enter(game) {
-    this.roomIndex = 0;
-    this.players = [
-      { slot: 0, picking: false, pickIndex: 0, options: [] },
-      { slot: 3, picking: false, pickIndex: 0, options: [] }
-    ];
+    roomIndex = 0;
+    players.forEach(p => {
+      p.picking = false;
+      p.pickIndex = 0;
+      p.options = [];
+    });
   },
 
   update(dt, game) {
-    const room = ROOMS[this.roomIndex];
-    const open = state.roomsOpen.includes(room.id);
+    const room = ROOMS[roomIndex];
+    const isOpen = state.roomsOpen.includes(room.id);
 
     for (let i = 0; i < game.numPlayers; i++) {
       const inp = game.inputs[i];
-      const p = this.players[i];
+      const p = players[i];
 
       if (p.picking) {
         if (inp.pressed('up')) {
           p.pickIndex = (p.pickIndex - 1 + p.options.length) % p.options.length;
-        }
-        if (inp.pressed('down')) {
+        } else if (inp.pressed('down')) {
           p.pickIndex = (p.pickIndex + 1) % p.options.length;
-        }
-        if (inp.pressed('a')) {
+        } else if (inp.pressed('a')) {
           placeItem(room.id, p.slot, p.options[p.pickIndex]);
           p.picking = false;
-        }
-        if (inp.pressed('b')) {
+        } else if (inp.pressed('b')) {
           p.picking = false;
         }
         continue;
       }
 
       if (inp.pressed('rb')) {
-        this.roomIndex = (this.roomIndex + 1) % ROOMS.length;
-        for (let j = 0; j < game.numPlayers; j++) {
-          this.players[j].picking = false;
-        }
-      }
-      if (inp.pressed('lb')) {
-        this.roomIndex = (this.roomIndex - 1 + ROOMS.length) % ROOMS.length;
-        for (let j = 0; j < game.numPlayers; j++) {
-          this.players[j].picking = false;
-        }
-      }
-
-      if (open) {
-        if (inp.pressed('left')) {
-          p.slot = (p.slot - 1 + SLOTS_PER_ROOM) % SLOTS_PER_ROOM;
-        }
+        roomIndex = (roomIndex + 1) % ROOMS.length;
+        players.forEach(pl => pl.picking = false);
+      } else if (inp.pressed('lb')) {
+        roomIndex = (roomIndex - 1 + ROOMS.length) % ROOMS.length;
+        players.forEach(pl => pl.picking = false);
+      } else if (isOpen) {
         if (inp.pressed('right')) {
           p.slot = (p.slot + 1) % SLOTS_PER_ROOM;
-        }
-        if (inp.pressed('a')) {
+        } else if (inp.pressed('left')) {
+          p.slot = (p.slot - 1 + SLOTS_PER_ROOM) % SLOTS_PER_ROOM;
+        } else if (inp.pressed('a')) {
           p.options = [...availableItems(), null];
           p.pickIndex = 0;
           p.picking = true;
         }
-      } else {
-        if (inp.pressed('a') && room.unlock(state)) {
+      } else if (inp.pressed('a') && room.unlock(state)) {
+        if (!state.roomsOpen.includes(room.id)) {
           state.roomsOpen.push(room.id);
           save();
         }
@@ -75,131 +76,162 @@ export const scene = {
   },
 
   draw(ctx, game) {
+    const room = ROOMS[roomIndex];
+    const isOpen = state.roomsOpen.includes(room.id);
+
+    // Background
     ctx.fillStyle = '#3b2616';
-    ctx.fillRect(0, 0, 1280, 720);
+    ctx.fillRect(0, 0, game.W, game.H);
 
-    const room = ROOMS[this.roomIndex];
-    const open = state.roomsOpen.includes(room.id);
-
-    // Draw room background
+    // Room Shape
     ctx.save();
-    ctx.fillStyle = room.wall;
     ctx.beginPath();
-    ctx.roundRect(90, 110, 1190, 610);
+    ctx.roundRect(90, 110, 1100, 500, 40);
+    ctx.fillStyle = room.wall;
     ctx.fill();
+    ctx.strokeStyle = '#4a2c12';
+    ctx.lineWidth = 8;
+    ctx.stroke();
+    ctx.clip();
+
+    // Floor band
+    ctx.fillStyle = 'rgba(90,58,26,0.35)';
+    ctx.fillRect(90, 500, 1100, 110);
+
+    // Doorways
+    ctx.fillStyle = '#3b2616';
+    ctx.beginPath();
+    ctx.ellipse(90, 520, 40, 70, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(1190, 520, 40, 70, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Decorations (Windows/Lamps)
+    ctx.fillStyle = '#fff3d6';
+    ctx.beginPath();
+    ctx.arc(300, 200, 15, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(980, 200, 15, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.restore();
 
-    // Draw floor band
-    ctx.fillStyle = '#2a1a0d';
-    ctx.fillRect(90, 500, 1190, 220);
+    // Title
+    drawText(ctx, room.name, game.W / 2, 60, 40, '#fff3d6', 'center');
+    drawText(ctx, `Room ${roomIndex + 1} of 5`, game.W / 2, 100, 24, '#fff3d6', 'center');
 
-    // Draw tunnel doorways
-    ctx.fillStyle = '#3b2616';
-    ctx.beginPath();
-    ctx.roundRect(90, 110, 100, 500);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.roundRect(1190 - 100, 110, 100, 500);
-    ctx.fill();
+    // Slots and Items
+    for (let s = 0; s < SLOTS_PER_ROOM; s++) {
+      const slotX = 215 + s * 170;
+      const slotY = 430;
+      
+      // Shelf
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(slotX - 60, slotY, 120, 14, 5);
+      ctx.fillStyle = '#8b5a2b';
+      ctx.fill();
+      ctx.strokeStyle = '#4a2c12';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      ctx.restore();
 
-    // Draw room title
-    drawText(ctx, `${room.name} - Room ${this.roomIndex + 1} of 5`, 640, 60, 36, '#5a3a1a', 'center');
-
-    // Draw button hints
-    drawButtonHint(ctx, 'lb', 'Change room', 100, 660, game.inputs[0].usingGamepad);
-    drawButtonHint(ctx, 'rb', 'Change room', 100, 660, game.inputs[0].usingGamepad);
-    drawButtonHint(ctx, 'a', 'Decorate', 100, 660, game.inputs[0].usingGamepad);
-    drawButtonHint(ctx, 'b', 'Back to the meadow', 100, 660, game.inputs[0].usingGamepad);
-
-    // Draw room slots
-    if (open) {
-      for (let slot = 0; slot < SLOTS_PER_ROOM; slot++) {
-        const x = 215 + slot * 170;
-        const y = 430;
-
-        // Draw shelf
+      const item = roomDecor(room.id)[s];
+      if (item) {
+        drawItem(ctx, item, slotX, slotY - 45, 90);
+      } else {
         ctx.save();
-        ctx.fillStyle = '#8b5a3a';
+        ctx.setLineDash([5, 5]);
         ctx.beginPath();
-        ctx.roundRect(x - 10, y - 10, 150, 30);
-        ctx.fill();
-        ctx.restore();
-
-        // Draw item or placeholder
-        const item = roomDecor(room.id)[slot];
-        if (item) {
-          drawItem(ctx, item, x, y - 45, 90);
-        } else {
-          ctx.strokeStyle = '#8b5a3a';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.roundRect(x - 10, y - 10, 150, 30);
-          ctx.stroke();
-        }
-      }
-
-      // Draw bunnies
-      for (let i = 0; i < game.numPlayers; i++) {
-        const p = this.players[i];
-        const x = 215 + p.slot * 170;
-        drawBunny(ctx, x, 590, {
-          facing: 1,
-          pose: 'idle',
-          t: game.time,
-          p: 0,
-          color: BUNNY_COLORS[i]
-        });
-        ctx.save();
-        ctx.strokeStyle = BUNNY_COLORS[i];
-        ctx.lineWidth = 5;
-        ctx.beginPath();
-        ctx.roundRect(x - 10, 580, 150, 30);
+        ctx.arc(slotX, slotY - 45, 30, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(255,255,255,0.3)';
         ctx.stroke();
         ctx.restore();
       }
-    } else {
-      // Draw locked room
+    }
+
+    // Players
+    for (let i = 0; i < game.numPlayers; i++) {
+      const p = players[i];
+      const slotX = 215 + p.slot * 170;
+      const slotY = 430;
+
+      // Selection Outline
       ctx.save();
-      ctx.fillStyle = '#3b2616';
       ctx.beginPath();
-      ctx.roundRect(590, 260, 100, 100);
-      ctx.fill();
+      ctx.roundRect(slotX - 65, slotY - 110, 130, 135, 10);
+      ctx.strokeStyle = BUNNY_COLORS[i];
+      ctx.lineWidth = 6;
+      ctx.stroke();
+      drawText(ctx, `P${i + 1}`, slotX, slotY - 125, 20, BUNNY_COLORS[i], 'center');
       ctx.restore();
 
-      drawText(ctx, `Locked: ${room.hint}`, 640, 360, 36, '#5a3a1a', 'center');
-
-      if (room.unlock(state)) {
-        drawButtonHint(ctx, 'a', 'Open this room!', 640, 660, game.inputs[0].usingGamepad);
-      }
+      drawBunny(ctx, slotX, 590, {
+        facing: 1,
+        pose: 'idle',
+        t: game.time,
+        p: 0,
+        color: BUNNY_COLORS[i]
+      });
     }
 
-    // Draw picking panel
+    // Picking UI
     for (let i = 0; i < game.numPlayers; i++) {
-      if (this.players[i].picking) {
-        const p = this.players[i];
-        const x = i === 0 ? 140 : 740;
-        const y = 130;
-        const w = 400;
-        drawPanel(ctx, x, y, w, 400, '#f0f0f0');
+      const p = players[i];
+      if (p.picking) {
+        const px = i === 0 ? 140 : 740;
+        drawPanel(ctx, px, 130, 400, 330);
+        
+        p.options.forEach((opt, idx) => {
+          const rowY = 200 + idx * 50;
+          const isSelected = idx === p.pickIndex;
+          
+          if (isSelected) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+            ctx.fillRect(px, rowY - 10, 380, 45);
+            ctx.restore();
+          }
 
-        const options = p.options;
-        const maxOptions = Math.min(options.length, 7);
-        for (let j = 0; j < maxOptions; j++) {
-          const item = options[j];
-          const isSelected = j === p.pickIndex;
-          ctx.save();
-          ctx.fillStyle = isSelected ? '#d9b38c' : '#ffffff';
-          ctx.fillRect(x + 10, y + 40 + j * 60, w - 20, 50);
-          ctx.restore();
+          if (opt) {
+            drawItem(ctx, opt, px + 40, rowY, 36);
+            drawText(ctx, ITEMS[opt].name, px + 100, rowY, 24, '#5a3a1a');
+          } else {
+            drawText(ctx, "Take it away", px + 40, rowY, 24, '#5a3a1a');
+          }
+        });
 
-          drawItem(ctx, item, x + 10 + 10, y + 40 + j * 60, 36);
-          drawText(ctx, ITEMS[item]?.name || (item === null ? 'Take it away' : 'Unknown'), x + 10 + 10 + 36 + 10, y + 40 + j * 60 + 25, 24, '#5a3a1a', 'left');
-        }
-
-        if (options.length === 1 && options[0] === null) {
-          drawText(ctx, 'Find flowers and prizes in the meadow!', x + 10, y + 40 + maxOptions * 60 + 10, 24, '#5a3a1a', 'left');
+        if (p.options.length === 1 && p.options[0] === null) {
+          drawText(ctx, "Find flowers and prizes in the meadow!", px + 40, 450, 20, '#5a3a1a');
         }
       }
     }
+
+    // Locked State
+    if (!isOpen) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(game.W / 2, 350, 50, 0, Math.PI * 2);
+      ctx.fillStyle = '#7a3a1a';
+      ctx.fill();
+      ctx.strokeStyle = '#3b2616';
+      ctx.lineWidth = 5;
+      ctx.stroke();
+      ctx.restore();
+
+      drawText(ctx, "Locked: " + room.hint, game.W / 2, 420, 30, '#fff3d6', 'center');
+      if (room.unlock(state)) {
+        drawButtonHint(ctx, 'a', 'Open this room!', game.W / 2, 480, game.inputs[0].usingGamepad);
+      }
+    }
+
+    // Bottom Hints
+    drawPanel(ctx, 90, 635, 1100, 60);
+    drawButtonHint(ctx, 'lb', 'Change room', 120, 665, game.inputs[0].usingGamepad);
+    drawButtonHint(ctx, 'rb', 'Change room', 420, 665, game.inputs[0].usingGamepad);
+    drawButtonHint(ctx, 'a', 'Decorate', 720, 665, game.inputs[0].usingGamepad);
+    drawButtonHint(ctx, 'b', 'Back to the meadow', 980, 665, game.inputs[0].usingGamepad);
   }
 };

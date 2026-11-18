@@ -155,7 +155,7 @@ export function drawBunny(ctx, x, y, o) {
   ctx.restore();
 }
 
-export function drawCarrotPlant(ctx, x, y, pulled, t) {
+function drawCarrotPlantOld(ctx, x, y, pulled, t) {
   ctx.save();
   ctx.translate(x, y);
   
@@ -424,7 +424,7 @@ export function drawBurrowHole(ctx, x, y) {
   ctx.restore();
 }
 
-export function drawItem(ctx, id, x, y, size) {
+function drawItemOld(ctx, id, x, y, size) {
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(size / 64, size / 64);
@@ -545,3 +545,5 @@ export function drawButtonHint(ctx, button, label, x, y, usingGamepad) {
   ctx.fillText(label, 35, 0);
   ctx.restore();
 }
+
+export { drawItem, drawCarrotPlant } from './draw2.js';
